@@ -2,40 +2,39 @@ import express from "express"
 import cors from "cors"
 import functions from "firebase-functions"
 import { transporter } from "./utils/mailer.js"
-// import nodemailer from 'nodemailer'
 import config from "./secrets.json" assert { type: 'json' }
 
-// const transporter = nodemailer.createTransport({
-//   service: 'Gmail',
-//   auth: config.transporter_auth,
-// })
 
 const app = express()
 app.use(express.json())
 app.use(cors())
 
 
-app.get("/form", (req, res) => {
+app.post("/contact/form", (req, res) => {
 
-
+    console.log(req)
+    // res.status(200).send({response:'Message sent successfully! We will contact you shortly'})
+    // return
       // Define email content
-  const mailOptions = {
+  const mailContent = {
     from: config.transporter_auth.user,
     to: config.transporter_deliver_to,
-    subject:`Contact Form:`,
-    text:"I AM A TEST!!!!",
-  };
+    subject:`Contact Form: e:${req.body.email} n:${req.body.name}`,
+    text:req.body.comment,
+  }
+
+  console.log("SENDING THIS:", mailContent)
 
   // Send the email
-  transporter.sendMail(mailOptions, (error, info) => {
+  transporter.sendMail(mailContent, (error, info) => {
     if (error) {
-      console.error('Error sending email:', error);
-      res.status(500).send('Error sending message...');
+      console.error('Error sending email:', error)
+      res.status(500).send({response:'Error sending message...'})
     } else {
-      console.log('Email sent:', info.response);
-      res.status(200).send('Message sent successfully! We will contact you shortly')
+      console.log('Email sent:', info.response)
+      res.status(200).send({response:'Message sent successfully! We will contact you shortly'})
     }
-  });
+  })
 
 })
 
