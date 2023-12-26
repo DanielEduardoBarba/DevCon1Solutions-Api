@@ -4,11 +4,9 @@ import functions from "firebase-functions"
 import { transporter } from "./utils/mailer.js"
 import config from "./secrets.json" assert { type: 'json' }
 
-
 const app = express()
 app.use(express.json())
 app.use(cors())
-
 
 app.post("/contact/form", (req, res) => {
 
@@ -19,7 +17,7 @@ app.post("/contact/form", (req, res) => {
   const mailContent = {
     from: config.transporter_auth.user,
     to: config.transporter_deliver_to,
-    subject:`Contact Form: e:${req.body.email} n:${req.body.name}`,
+    subject:`Contact Form: e:${req.body.email} p:${req.body.phone} n:${req.body.name}`,
     text:req.body.comment,
   }
 
@@ -37,10 +35,6 @@ app.post("/contact/form", (req, res) => {
   })
 
 })
-
-
-
-
 
 
 export const api = functions.https.onRequest(app)
