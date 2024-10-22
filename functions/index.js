@@ -8,11 +8,11 @@ const app = express()
 app.use(express.json())
 app.use(cors())
 
-app.post("/contact/form", (req, res) => {
+app.post("/devcon/contact/form", (req, res) => {
   const { key, email, phone, name, comment } = req.body
   if (key != config.key) {
 
-    return res.status(401).send("Not AUTHORIZED!")
+    return res.status(401).send({ response: 'Not AUTHORIZED!' })
   }
   console.log(req)
 

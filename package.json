@@ -5,11 +5,12 @@
   "main": "index.js",
   "scripts": {
     "server":"firebase emulators:start --only functions",
+    "deploy":"firebase deploy --only functions",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
   "author": "",
-  "license": "ISC",
+  "license": "none",
   "dependencies": {
     "firebase": "^10.6.0"
   }
