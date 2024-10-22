@@ -9,16 +9,19 @@ app.use(express.json())
 app.use(cors())
 
 app.post("/contact/form", (req, res) => {
+  const { key, email, phone, name, comment } = req.body
+  if (key != config.key) {
 
-    console.log(req)
-    // res.status(200).send({response:'Message sent successfully! We will contact you shortly'})
-    // return
-      // Define email content
+    return res.status(401).send("Not AUTHORIZED!")
+  }
+  console.log(req)
+
+  // Define email content
   const mailContent = {
     from: config.transporter_auth.user,
     to: config.transporter_deliver_to,
-    subject:`Contact Form: e:${req.body.email} p:${req.body.phone} n:${req.body.name}`,
-    text:req.body.comment,
+    subject: `Contact Form: e:${email} p:${phone} n:${name}`,
+    text: comment,
   }
 
   console.log("SENDING THIS:", mailContent)
@@ -27,10 +30,10 @@ app.post("/contact/form", (req, res) => {
   transporter.sendMail(mailContent, (error, info) => {
     if (error) {
       console.error('Error sending email:', error)
-      res.status(500).send({response:'Error sending message...'})
+      res.status(500).send({ response: 'Error sending message...' })
     } else {
       console.log('Email sent:', info.response)
-      res.status(200).send({response:'Message sent successfully! We will contact you shortly'})
+      res.status(200).send({ response: 'Message sent successfully! We will contact you shortly' })
     }
   })
 
