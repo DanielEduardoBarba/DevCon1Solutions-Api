@@ -18,7 +18,5 @@ export const config = {
   brand: {
     name: process.env.BRAND_NAME || "Devcon1 Solutions",
     url: process.env.BRAND_URL || "https://devcon1solutions.com",
-    primaryColor: process.env.BRAND_PRIMARY_COLOR || "#0a84ff",
-    accentColor: process.env.BRAND_ACCENT_COLOR || "#0b1220",
   },
 }
