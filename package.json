@@ -4,8 +4,8 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "server":"firebase emulators:start --only functions",
-    "deploy":"firebase deploy --only functions",
+    "server":"cd functions/ && npm run server",
+    "deploy":"cd functions/ && npm run deploy",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
