@@ -9,6 +9,9 @@ firebase-debug.*.log*
 
 package-lock.json
 secrets.json
+.env
+.env.local
+.env.*.local
 
 # Firebase cache
 .firebase/
