@@ -4,9 +4,10 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "server":"cd functions/ && npm run server",
-    "deploy":"cd functions/ && npm run deploy",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "server": "cd functions && npm run server",
+    "build": "cd functions && npm run build",
+    "deploy": "cd functions && npm run deploy",
+    "logs": "cd functions && npm run logs"
   },
   "keywords": [],
   "author": "",

@@ -3,11 +3,16 @@
     {
       "source": "functions",
       "codebase": "default",
+      "predeploy": ["npm --prefix \"$RESOURCE_DIR\" run build"],
       "ignore": [
         "node_modules",
         ".git",
         "firebase-debug.log",
-        "firebase-debug.*.log"
+        "firebase-debug.*.log",
+        "src",
+        "tsconfig.json",
+        ".env",
+        ".env.example"
       ]
     }
   ],
