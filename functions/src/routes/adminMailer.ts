@@ -5,7 +5,7 @@ import {
   requireAdminSession,
 } from "../middleware/auth.js"
 import { encryptSecret } from "../utils/crypto.js"
-import { getMailerSettingsModel } from "../models/MailerSettings.js"
+import * as mailerRepo from "../repos/mailer.js"
 import { publicMailerStatus, sendMail, getResolvedMailContext } from "../services/mailer.js"
 
 const router = Router()
@@ -14,14 +14,12 @@ router.use(requireAdminSession)
 router.get(
   "/",
   asyncHandler(async (_req, res) => {
-    const Mailer = getMailerSettingsModel()
-    const settings = await Mailer.findOne({ singletonKey: "default" })
+    const settings = await mailerRepo.getMailerSettings()
     if (!settings) {
       res.status(404).json({ error: "Mailer settings missing" })
       return
     }
-    const status = publicMailerStatus(settings)
-    res.json({ mailer: status })
+    res.json({ mailer: publicMailerStatus(settings) })
   })
 )
 
@@ -52,45 +50,42 @@ router.put(
   "/",
   asyncHandler(async (req, res) => {
     const body = updateSchema.parse(req.body)
-    const Mailer = getMailerSettingsModel()
-    const settings = await Mailer.findOne({ singletonKey: "default" })
+    const settings = await mailerRepo.getMailerSettings()
     if (!settings) {
       res.status(404).json({ error: "Mailer settings missing" })
       return
     }
 
-    if (body.activeProvider) settings.activeProvider = body.activeProvider
-    if (body.defaultDeliverTo !== undefined) {
-      settings.defaultDeliverTo = body.defaultDeliverTo
-    }
-    if (body.brandName !== undefined) settings.brandName = body.brandName
-    if (body.brandUrl !== undefined) settings.brandUrl = body.brandUrl
-
+    const smtp = { ...settings.smtp }
     if (body.smtp) {
-      if (body.smtp.host !== undefined) settings.smtp.host = body.smtp.host
-      if (body.smtp.port !== undefined) settings.smtp.port = body.smtp.port
-      if (body.smtp.secure !== undefined) settings.smtp.secure = body.smtp.secure
-      if (body.smtp.user !== undefined) settings.smtp.user = body.smtp.user
-      if (body.smtp.pass) {
-        settings.smtp.passEncrypted = encryptSecret(body.smtp.pass)
-      }
+      if (body.smtp.host !== undefined) smtp.host = body.smtp.host
+      if (body.smtp.port !== undefined) smtp.port = body.smtp.port
+      if (body.smtp.secure !== undefined) smtp.secure = body.smtp.secure
+      if (body.smtp.user !== undefined) smtp.user = body.smtp.user
+      if (body.smtp.pass) smtp.passEncrypted = encryptSecret(body.smtp.pass)
     }
 
+    const resend = { ...settings.resend }
     if (body.resend) {
-      if (body.resend.fromEmail !== undefined) {
-        settings.resend.fromEmail = body.resend.fromEmail
-      }
-      if (body.resend.fromName !== undefined) {
-        settings.resend.fromName = body.resend.fromName
-      }
+      if (body.resend.fromEmail !== undefined) resend.fromEmail = body.resend.fromEmail
+      if (body.resend.fromName !== undefined) resend.fromName = body.resend.fromName
       if (body.resend.apiKey) {
-        settings.resend.apiKeyEncrypted = encryptSecret(body.resend.apiKey)
+        resend.apiKeyEncrypted = encryptSecret(body.resend.apiKey)
       }
     }
 
-    await settings.save()
-    const status = publicMailerStatus(settings)
-    res.json({ mailer: status })
+    const updated = await mailerRepo.updateMailerSettings({
+      ...(body.activeProvider ? { activeProvider: body.activeProvider } : {}),
+      ...(body.defaultDeliverTo !== undefined
+        ? { defaultDeliverTo: body.defaultDeliverTo }
+        : {}),
+      ...(body.brandName !== undefined ? { brandName: body.brandName } : {}),
+      ...(body.brandUrl !== undefined ? { brandUrl: body.brandUrl } : {}),
+      smtp,
+      resend,
+    })
+
+    res.json({ mailer: publicMailerStatus(updated!) })
   })
 )
 

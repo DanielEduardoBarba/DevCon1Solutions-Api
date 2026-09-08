@@ -7,12 +7,12 @@ import {
   formatMultiline,
   renderTemplate,
 } from "../utils/templates.js"
-import { getMailerSettingsModel } from "../models/MailerSettings.js"
-import { getEmailTemplateModel, type EmailTemplateDoc } from "../models/EmailTemplate.js"
+import * as mailerRepo from "../repos/mailer.js"
+import * as templateRepo from "../repos/templates.js"
+import type { EmailTemplateRecord, MailerSettingsRecord } from "../db/types.js"
 import { readFileSync } from "node:fs"
 import { dirname, join } from "node:path"
 import { fileURLToPath } from "node:url"
-import type { Types } from "mongoose"
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const REPLY_BUTTON_TEMPLATE = readFileSync(
@@ -47,9 +47,8 @@ export type ResolvedMailContext = {
   provider: "smtp" | "resend"
 }
 
-async function loadSettings() {
-  const Mailer = getMailerSettingsModel()
-  const settings = await Mailer.findOne({ singletonKey: "default" })
+async function loadSettings(): Promise<MailerSettingsRecord> {
+  const settings = await mailerRepo.getMailerSettings()
   if (!settings) {
     throw new Error("Mailer settings not configured")
   }
@@ -245,33 +244,34 @@ export function buildTemplateVars(
 }
 
 async function resolveTemplate(
-  id: string | Types.ObjectId | null | undefined,
+  id: string | null | undefined,
   type: "notification" | "confirmation"
-): Promise<EmailTemplateDoc | null> {
-  const Template = getEmailTemplateModel()
+): Promise<EmailTemplateRecord | null> {
   if (id) {
-    const found = await Template.findById(id)
+    const found = await templateRepo.getTemplateById(id)
     if (found) return found
   }
-  const slug = type === "notification" ? "default-notification" : "default-confirmation"
-  return Template.findOne({ slug })
+  const slug =
+    type === "notification" ? "default-notification" : "default-confirmation"
+  return templateRepo.getTemplateBySlug(slug)
 }
 
 export async function renderEmailFromTemplate(
-  template: EmailTemplateDoc,
+  template: EmailTemplateRecord,
   vars: Record<string, string>,
   subjectOverride?: string
 ): Promise<{ subject: string; text: string; html: string }> {
   const subject = subjectOverride
     ? subjectOverride
     : renderTemplate(template.subjectTemplate, vars)
-  // Subject in HTML title should match
   const htmlVars = { ...vars, SUBJECT: escapeHtml(subject) }
   const html = renderTemplate(template.htmlTemplate, htmlVars)
   const text = template.textTemplate
     ? renderTemplate(template.textTemplate, {
         ...vars,
-        MESSAGE: (vars.MESSAGE || "").replace(/<br\s*\/?>/gi, "\n").replace(/<[^>]+>/g, ""),
+        MESSAGE: (vars.MESSAGE || "")
+          .replace(/<br\s*\/?>/gi, "\n")
+          .replace(/<[^>]+>/g, ""),
         NAME_DISPLAY: vars.NAME_DISPLAY.replace(/&[^;]+;/g, "") || "there",
       })
     : subject
@@ -282,15 +282,14 @@ export async function buildContactEmails(
   payload: ContactPayload,
   opts: {
     brand: Brand
-    notificationTemplateId?: string | Types.ObjectId | null
-    confirmationTemplateId?: string | Types.ObjectId | null
+    notificationTemplateId?: string | null
+    confirmationTemplateId?: string | null
   }
 ): Promise<{
   notification: { subject: string; text: string; html: string }
   confirmation: { subject: string; text: string; html: string }
 }> {
   const vars = buildTemplateVars(payload, opts.brand)
-  // Confirmation uses friendlier NAME_DISPLAY default
   const confirmVars = {
     ...vars,
     NAME_DISPLAY: escapeHtml(payload.name || "there"),

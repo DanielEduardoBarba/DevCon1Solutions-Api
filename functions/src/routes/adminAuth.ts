@@ -16,11 +16,11 @@ import {
   issueEmailOtp,
   loginWithPassword,
   setupAdmin,
+  updateAdminEmail,
   verifyMfa,
   verifyToken,
   type PendingMfaClaims,
 } from "../services/auth.js"
-import { getAdminModel } from "../models/Admin.js"
 
 const router = Router()
 
@@ -160,15 +160,8 @@ router.patch(
   requireAdminSession,
   asyncHandler(async (req: AuthedRequest, res) => {
     const body = z.object({ email: z.string().email() }).parse(req.body)
-    const Admin = getAdminModel()
-    const admin = await Admin.findById(req.adminId)
-    if (!admin) {
-      res.status(404).json({ error: "Not found" })
-      return
-    }
-    admin.email = body.email.toLowerCase().trim()
-    await admin.save()
-    res.json({ email: admin.email })
+    const result = await updateAdminEmail(req.adminId!, body.email)
+    res.json(result)
   })
 )
 

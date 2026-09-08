@@ -1,5 +1,6 @@
 {
   "projects": {
-    "default": "devcon1solutions-api"
+    "default": "devcon1solutions",
+    "api-legacy": "devcon1solutions-api"
   }
 }

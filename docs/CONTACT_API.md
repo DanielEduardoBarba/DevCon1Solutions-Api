@@ -1,6 +1,6 @@
 # Contact mailer API
 
-Generic contact-form endpoint. Any site with a **registered API key** can relay submissions through this service. Mail is sent with the active provider (SMTP/Nodemailer or Resend) and HTML templates stored in MongoDB.
+Generic contact-form endpoint. Any site with a **registered API key** can relay submissions through this service. Mail is sent with the active provider (SMTP/Nodemailer or Resend) and HTML templates stored in Firestore.
 
 ## Endpoints
 

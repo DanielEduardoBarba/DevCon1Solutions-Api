@@ -18,8 +18,19 @@ export const env = {
   nodeEnv: optional("NODE_ENV", "development"),
   port: Number(optional("PORT", "5050")),
 
-  mongodbUri: requiredInProd("MONGODB_URI", "mongodb://127.0.0.1:27017"),
-  mongodbDbName: optional("MONGODB_DB_NAME", "devcon1"),
+  /**
+   * Firebase / Firestore project — same as site hosting (`devcon1solutions`).
+   */
+  firebaseProjectId: optional("FIREBASE_PROJECT_ID", "devcon1solutions"),
+
+  /**
+   * Path to service account JSON (relative to functions/ or absolute).
+   * Default local path: secrets/service-account.json
+   */
+  firebaseServiceAccountPath: optional(
+    "FIREBASE_SERVICE_ACCOUNT_PATH",
+    "secrets/service-account.json"
+  ),
 
   /** 32+ character secret used to encrypt mailer credentials at rest */
   encryptionKey: requiredInProd(
@@ -48,6 +59,6 @@ export const env = {
   defaultBrandName: optional("DEFAULT_BRAND_NAME", "Devcon1 Solutions"),
   defaultBrandUrl: optional("DEFAULT_BRAND_URL", "https://devcon1solutions.com"),
 
-  /** Legacy single key — migrated into Mongo on first boot if set */
+  /** Legacy single key — imported into Firestore on first boot if set */
   legacyApiKey: optional("API_KEY"),
 }

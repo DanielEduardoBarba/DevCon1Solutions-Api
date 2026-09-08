@@ -1,12 +1,13 @@
 import type { Request, Response, NextFunction } from "express"
 import { sha256 } from "../utils/crypto.js"
-import { getApiKeyModel, type ApiKeyDoc } from "../models/ApiKey.js"
+import type { ApiKeyRecord } from "../db/types.js"
+import * as apiKeysRepo from "../repos/apiKeys.js"
 import { verifyToken, type SessionClaims } from "../services/auth.js"
 
 export type AuthedRequest = Request & {
   adminId?: string
   adminEmail?: string
-  apiKey?: ApiKeyDoc
+  apiKey?: ApiKeyRecord
 }
 
 export function extractApiKey(req: Request): string | null {
@@ -36,14 +37,12 @@ export async function requireApiKey(
       res.status(401).json({ error: "Missing API key", response: "Not AUTHORIZED!" })
       return
     }
-    const ApiKey = getApiKeyModel()
-    const doc = await ApiKey.findOne({ keyHash: sha256(raw), active: true })
+    const doc = await apiKeysRepo.findActiveApiKeyByHash(sha256(raw))
     if (!doc) {
       res.status(401).json({ error: "Invalid API key", response: "Not AUTHORIZED!" })
       return
     }
-    doc.lastUsedAt = new Date()
-    await doc.save()
+    await apiKeysRepo.touchApiKeyLastUsed(doc.id)
     req.apiKey = doc
     next()
   } catch (err) {

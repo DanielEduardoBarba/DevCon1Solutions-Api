@@ -12,7 +12,8 @@
         "src",
         "tsconfig.json",
         ".env",
-        ".env.example"
+        ".env.example",
+        "secrets"
       ]
     }
   ],

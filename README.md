@@ -1,18 +1,18 @@
 # Devcon1 Solutions API
 
-TypeScript Express API (Firebase Cloud Functions) with MongoDB-backed API keys, mailer settings, HTML templates, and a single-admin console.
+TypeScript Express API (Firebase Cloud Functions) with Firestore-backed API keys, mailer settings, HTML templates, and a single-admin console.
 
 ## Quick start
 
 ```bash
 cd functions
-cp .env.example .env   # fill MongoDB + secrets
+cp .env.example .env   # fill Firebase service account path + secrets
 npm install
 npm run build
 npm run server         # http://localhost:5050
 ```
 
-Requires a running MongoDB (`MONGODB_URI`).
+Requires Firestore in Firebase project `devcon1solutions` and a service account at `functions/secrets/service-account.json` for local runs.
 
 Deploy:
 

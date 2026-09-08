@@ -5,3 +5,11 @@ lib/
 .DS_Store
 firebase-debug.log
 ui-debug.log
+
+# Service account credentials — never commit
+secrets/*
+!secrets/.gitkeep
+!secrets/README.md
+*.pem
+*-firebase-adminsdk-*.json
+service-account*.json

@@ -3,9 +3,9 @@ import { dirname, join } from "node:path"
 import { fileURLToPath } from "node:url"
 import { env } from "../config/env.js"
 import { encryptSecret, sha256 } from "../utils/crypto.js"
-import { getApiKeyModel } from "../models/ApiKey.js"
-import { getEmailTemplateModel } from "../models/EmailTemplate.js"
-import { getMailerSettingsModel } from "../models/MailerSettings.js"
+import * as apiKeysRepo from "../repos/apiKeys.js"
+import * as templateRepo from "../repos/templates.js"
+import * as mailerRepo from "../repos/mailer.js"
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const TEMPLATES_DIR = join(__dirname, "..", "templates")
@@ -52,11 +52,9 @@ export async function bootstrapDefaults(): Promise<void> {
   if (bootstrapped) return
   bootstrapped = true
 
-  const Mailer = getMailerSettingsModel()
-  const existingSettings = await Mailer.findOne({ singletonKey: "default" })
+  const existingSettings = await mailerRepo.getMailerSettings()
   if (!existingSettings) {
-    await Mailer.create({
-      singletonKey: "default",
+    await mailerRepo.createMailerSettings({
       activeProvider: "smtp",
       smtp: {
         host: env.defaultTransporterHost,
@@ -74,8 +72,6 @@ export async function bootstrapDefaults(): Promise<void> {
     console.log("Seeded default mailer settings")
   }
 
-  const Template = getEmailTemplateModel()
-  // Keep {{REPLY_BUTTON}} as a runtime placeholder — filled by mailer service
   const defaults = [
     {
       slug: "default-notification",
@@ -100,28 +96,24 @@ export async function bootstrapDefaults(): Promise<void> {
   ]
 
   for (const t of defaults) {
-    const existing = await Template.findOne({ slug: t.slug })
+    const existing = await templateRepo.getTemplateBySlug(t.slug)
     if (!existing) {
-      await Template.create(t)
+      await templateRepo.createTemplate(t)
       console.log(`Seeded template: ${t.slug}`)
     }
   }
 
-  // Migrate legacy env API_KEY into Mongo once
   if (env.legacyApiKey) {
-    const ApiKey = getApiKeyModel()
     const hash = sha256(env.legacyApiKey)
-    const exists = await ApiKey.findOne({ keyHash: hash })
+    const exists = await apiKeysRepo.findApiKeyByHash(hash)
     if (!exists) {
-      const prefix = env.legacyApiKey.slice(0, 12)
-      await ApiKey.create({
+      await apiKeysRepo.createApiKey({
         name: "Legacy env API_KEY",
-        prefix,
+        prefix: env.legacyApiKey.slice(0, 12),
         keyHash: hash,
-        active: true,
         notes: "Imported from API_KEY environment variable on first boot",
       })
-      console.log("Imported legacy API_KEY into MongoDB")
+      console.log("Imported legacy API_KEY into Firestore")
     }
   }
 }

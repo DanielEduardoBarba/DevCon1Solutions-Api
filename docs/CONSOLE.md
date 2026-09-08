@@ -9,7 +9,7 @@ The console is a static Next.js page that talks to the API under `/admin/*`.
 
 ## First-time setup
 
-If no admin exists in MongoDB:
+If no admin exists in Firestore:
 
 1. Open `/console`
 2. Enter admin **email** + **password** (min 10 characters)
@@ -36,7 +36,7 @@ After setup, `/console` always asks for the **admin password** (and MFA if enabl
 
 - Select active provider: **SMTP (Nodemailer)** or **Resend**
 - Store / rotate SMTP user + app password, or Resend API key + from address
-- Secrets are encrypted with `ENCRYPTION_KEY` before MongoDB storage
+- Secrets are encrypted with `ENCRYPTION_KEY` before Firestore storage
 - Set default deliver-to inbox and brand name/URL
 - Send a test email
 
@@ -71,15 +71,16 @@ After setup, `/console` always asks for the **admin password** (and MFA if enabl
 | `POST` | `/admin/mailer/test` | Test send |
 | `GET/POST/PUT/DELETE` | `/admin/templates` | Template CRUD |
 
-## MongoDB collections
+## Firestore collections
 
 | Collection | Contents |
 | --- | --- |
-| `admin` | Single admin user |
+| `console_admin` | Single admin user (`primary` doc) |
 | `api_keys` | Hashed keys + per-key contact options |
 | `mailer_settings` | Active provider + encrypted credentials |
 | `email_templates` | Subject/HTML/text templates |
 | `mfa_challenges` | Short-lived email OTP hashes |
+
 
 ## Security notes
 

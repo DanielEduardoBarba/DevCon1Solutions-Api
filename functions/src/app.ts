@@ -2,7 +2,7 @@ import express, { type Request, type Response, type NextFunction } from "express
 import cors from "cors"
 import { ZodError } from "zod"
 import { env } from "./config/env.js"
-import { connectDb, ensureDb } from "./db/connection.js"
+import { connectDb, ensureDb } from "./db/firebase.js"
 import { bootstrapDefaults } from "./services/bootstrap.js"
 import contactRouter from "./routes/contact.js"
 import adminAuthRouter from "./routes/adminAuth.js"

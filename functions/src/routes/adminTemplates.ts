@@ -5,7 +5,7 @@ import {
   requireAdminSession,
 } from "../middleware/auth.js"
 import { slugify } from "../utils/templates.js"
-import { getEmailTemplateModel } from "../models/EmailTemplate.js"
+import * as templateRepo from "../repos/templates.js"
 
 const router = Router()
 router.use(requireAdminSession)
@@ -13,11 +13,10 @@ router.use(requireAdminSession)
 router.get(
   "/",
   asyncHandler(async (_req, res) => {
-    const Template = getEmailTemplateModel()
-    const templates = await Template.find().sort({ type: 1, name: 1 }).lean()
+    const templates = await templateRepo.listTemplates()
     res.json({
       templates: templates.map((t) => ({
-        id: String(t._id),
+        id: t.id,
         name: t.name,
         slug: t.slug,
         type: t.type,
@@ -47,14 +46,13 @@ router.post(
   "/",
   asyncHandler(async (req, res) => {
     const body = upsertSchema.parse(req.body)
-    const Template = getEmailTemplateModel()
     const slug = slugify(body.slug || body.name)
-    const existing = await Template.findOne({ slug })
+    const existing = await templateRepo.getTemplateBySlug(slug)
     if (existing) {
       res.status(409).json({ error: "Slug already exists" })
       return
     }
-    const doc = await Template.create({
+    const doc = await templateRepo.createTemplate({
       name: body.name,
       slug,
       type: body.type,
@@ -64,7 +62,7 @@ router.post(
       description: body.description || "",
       isSystemDefault: false,
     })
-    res.status(201).json({ id: String(doc._id), slug: doc.slug })
+    res.status(201).json({ id: doc.id, slug: doc.slug })
   })
 )
 
@@ -72,29 +70,29 @@ router.put(
   "/:id",
   asyncHandler(async (req, res) => {
     const body = upsertSchema.partial().parse(req.body)
-    const Template = getEmailTemplateModel()
-    const doc = await Template.findById(req.params.id)
-    if (!doc) {
+    const updated = await templateRepo.updateTemplate(req.params.id, {
+      ...(body.name !== undefined ? { name: body.name } : {}),
+      ...(body.slug !== undefined ? { slug: slugify(body.slug) } : {}),
+      ...(body.type !== undefined ? { type: body.type } : {}),
+      ...(body.subjectTemplate !== undefined
+        ? { subjectTemplate: body.subjectTemplate }
+        : {}),
+      ...(body.htmlTemplate !== undefined ? { htmlTemplate: body.htmlTemplate } : {}),
+      ...(body.textTemplate !== undefined ? { textTemplate: body.textTemplate } : {}),
+      ...(body.description !== undefined ? { description: body.description } : {}),
+    })
+    if (!updated) {
       res.status(404).json({ error: "Template not found" })
       return
     }
-    if (body.name !== undefined) doc.name = body.name
-    if (body.slug !== undefined) doc.slug = slugify(body.slug)
-    if (body.type !== undefined) doc.type = body.type
-    if (body.subjectTemplate !== undefined) doc.subjectTemplate = body.subjectTemplate
-    if (body.htmlTemplate !== undefined) doc.htmlTemplate = body.htmlTemplate
-    if (body.textTemplate !== undefined) doc.textTemplate = body.textTemplate
-    if (body.description !== undefined) doc.description = body.description
-    await doc.save()
-    res.json({ ok: true, id: String(doc._id) })
+    res.json({ ok: true, id: updated.id })
   })
 )
 
 router.delete(
   "/:id",
   asyncHandler(async (req, res) => {
-    const Template = getEmailTemplateModel()
-    const doc = await Template.findById(req.params.id)
+    const doc = await templateRepo.getTemplateById(req.params.id)
     if (!doc) {
       res.status(404).json({ error: "Template not found" })
       return
@@ -103,7 +101,7 @@ router.delete(
       res.status(400).json({ error: "Cannot delete system default templates" })
       return
     }
-    await doc.deleteOne()
+    await templateRepo.deleteTemplate(req.params.id)
     res.json({ ok: true })
   })
 )

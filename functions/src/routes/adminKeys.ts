@@ -5,7 +5,7 @@ import {
   requireAdminSession,
 } from "../middleware/auth.js"
 import { generateApiKey } from "../utils/crypto.js"
-import { getApiKeyModel } from "../models/ApiKey.js"
+import * as apiKeysRepo from "../repos/apiKeys.js"
 
 const router = Router()
 router.use(requireAdminSession)
@@ -13,11 +13,10 @@ router.use(requireAdminSession)
 router.get(
   "/",
   asyncHandler(async (_req, res) => {
-    const ApiKey = getApiKeyModel()
-    const keys = await ApiKey.find().sort({ createdAt: -1 }).lean()
+    const keys = await apiKeysRepo.listApiKeys()
     res.json({
       keys: keys.map((k) => ({
-        id: String(k._id),
+        id: k.id,
         name: k.name,
         prefix: k.prefix,
         active: k.active,
@@ -27,12 +26,8 @@ router.get(
         sendNotification: k.sendNotification,
         sendConfirmation: k.sendConfirmation,
         allowOverrides: k.allowOverrides,
-        notificationTemplateId: k.notificationTemplateId
-          ? String(k.notificationTemplateId)
-          : null,
-        confirmationTemplateId: k.confirmationTemplateId
-          ? String(k.confirmationTemplateId)
-          : null,
+        notificationTemplateId: k.notificationTemplateId,
+        confirmationTemplateId: k.confirmationTemplateId,
         notes: k.notes,
         lastUsedAt: k.lastUsedAt,
         createdAt: k.createdAt,
@@ -60,12 +55,10 @@ router.post(
   asyncHandler(async (req, res) => {
     const body = createSchema.parse(req.body)
     const { raw, prefix, hash } = generateApiKey()
-    const ApiKey = getApiKeyModel()
-    const doc = await ApiKey.create({
+    const doc = await apiKeysRepo.createApiKey({
       name: body.name,
       prefix,
       keyHash: hash,
-      active: true,
       deliverTo: body.deliverTo || null,
       brandName: body.brandName || null,
       brandUrl: body.brandUrl || null,
@@ -78,10 +71,9 @@ router.post(
     })
     res.status(201).json({
       key: {
-        id: String(doc._id),
+        id: doc.id,
         name: doc.name,
         prefix: doc.prefix,
-        /** Shown once — store it securely */
         secret: raw,
         active: doc.active,
       },
@@ -92,41 +84,46 @@ router.post(
 router.patch(
   "/:id",
   asyncHandler(async (req, res) => {
-    const body = createSchema.partial().extend({
-      active: z.boolean().optional(),
-    }).parse(req.body)
-    const ApiKey = getApiKeyModel()
-    const doc = await ApiKey.findById(req.params.id)
-    if (!doc) {
+    const body = createSchema
+      .partial()
+      .extend({ active: z.boolean().optional() })
+      .parse(req.body)
+    const updated = await apiKeysRepo.updateApiKey(req.params.id, {
+      ...(body.name !== undefined ? { name: body.name } : {}),
+      ...(body.deliverTo !== undefined ? { deliverTo: body.deliverTo || null } : {}),
+      ...(body.brandName !== undefined ? { brandName: body.brandName || null } : {}),
+      ...(body.brandUrl !== undefined ? { brandUrl: body.brandUrl || null } : {}),
+      ...(body.sendNotification !== undefined
+        ? { sendNotification: body.sendNotification }
+        : {}),
+      ...(body.sendConfirmation !== undefined
+        ? { sendConfirmation: body.sendConfirmation }
+        : {}),
+      ...(body.allowOverrides !== undefined
+        ? { allowOverrides: body.allowOverrides }
+        : {}),
+      ...(body.notificationTemplateId !== undefined
+        ? { notificationTemplateId: body.notificationTemplateId || null }
+        : {}),
+      ...(body.confirmationTemplateId !== undefined
+        ? { confirmationTemplateId: body.confirmationTemplateId || null }
+        : {}),
+      ...(body.notes !== undefined ? { notes: body.notes } : {}),
+      ...(body.active !== undefined ? { active: body.active } : {}),
+    })
+    if (!updated) {
       res.status(404).json({ error: "API key not found" })
       return
     }
-    if (body.name !== undefined) doc.name = body.name
-    if (body.deliverTo !== undefined) doc.deliverTo = body.deliverTo || null
-    if (body.brandName !== undefined) doc.brandName = body.brandName || null
-    if (body.brandUrl !== undefined) doc.brandUrl = body.brandUrl || null
-    if (body.sendNotification !== undefined) doc.sendNotification = body.sendNotification
-    if (body.sendConfirmation !== undefined) doc.sendConfirmation = body.sendConfirmation
-    if (body.allowOverrides !== undefined) doc.allowOverrides = body.allowOverrides
-    if (body.notificationTemplateId !== undefined) {
-      doc.notificationTemplateId = (body.notificationTemplateId || null) as typeof doc.notificationTemplateId
-    }
-    if (body.confirmationTemplateId !== undefined) {
-      doc.confirmationTemplateId = (body.confirmationTemplateId || null) as typeof doc.confirmationTemplateId
-    }
-    if (body.notes !== undefined) doc.notes = body.notes
-    if (body.active !== undefined) doc.active = body.active
-    await doc.save()
-    res.json({ ok: true, id: String(doc._id) })
+    res.json({ ok: true, id: updated.id })
   })
 )
 
 router.delete(
   "/:id",
   asyncHandler(async (req, res) => {
-    const ApiKey = getApiKeyModel()
-    const result = await ApiKey.findByIdAndDelete(req.params.id)
-    if (!result) {
+    const ok = await apiKeysRepo.deleteApiKey(req.params.id)
+    if (!ok) {
       res.status(404).json({ error: "API key not found" })
       return
     }
